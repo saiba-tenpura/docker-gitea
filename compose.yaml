@@ -1,0 +1,48 @@
+services:
+  gitea:
+    image: docker.gitea.com/gitea:1.25.3
+    environment:
+      - USER_UID=${USER_UID}
+      - USER_GID=${USER_GID}
+      - GITEA__database__DB_TYPE=mysql
+      - GITEA__database__HOST=db:3306
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=${DATABASE_PASSWORD}
+    restart: always
+    networks:
+      - default
+      - proxy-network
+    volumes:
+      - ./gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "222:22"
+    expose:
+      - 3000
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitea.rule=HostRegexp(`${GITEA_URL}`)"
+      - "traefik.http.routers.gitea.tls=true"
+      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+
+  db:
+    image: mysql:8.4
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DATABASE_ROOT_PASSWORD}
+      - MYSQL_USER=gitea
+      - MYSQL_PASSWORD=${DATABASE_PASSWORD}
+      - MYSQL_DATABASE=gitea
+    networks:
+      - default
+    volumes:
+      - ./mysql:/var/lib/mysql
+
+networks:
+  default:
+  proxy-network:
+    external: true
